@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:extension": "node --test scripts/media_extension.test.js"
+  }
+}
