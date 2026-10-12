@@ -2,16 +2,14 @@ import { createMediaClient } from './media/media-client.js';
 import { formatTime } from './media/media-model.js';
 import { PopupView } from './ui/popup-view.js';
 
-const pollingIntervalMs = 1500;
-
-/** 사용자 입력과 주기 조회를 조정합니다. 탐색과 화면 구성은 별도 모듈이 담당합니다. */
+/** 사용자 입력과 변경 이벤트를 조정합니다. 탐색과 화면 구성은 별도 모듈이 담당합니다. */
 export class PopupController {
     constructor(client) {
         this.client = client;
         this.isBusy = false;
         this.isEditing = false;
-        this.isPolling = false;
-        this.revision = 0;
+        this.lastRevision = -1;
+        this.pendingResponse = null;
         this.view = new PopupView(
             (media, action, options) => this.control(media, action, options),
             () => { this.isEditing = true; },
@@ -20,22 +18,21 @@ export class PopupController {
 
     start() {
         this.view.refreshButton.addEventListener('click', () => this.refresh());
-        document.addEventListener('pointerup', () => { this.isEditing = false; });
-        document.addEventListener('pointercancel', () => { this.isEditing = false; });
+        document.addEventListener('pointerup', () => this.finishEditing());
+        document.addEventListener('pointercancel', () => this.finishEditing());
         document.addEventListener('keydown', event => {
             if (event.target?.type === 'range') this.isEditing = true;
         });
-        document.addEventListener('keyup', () => { this.isEditing = false; });
-        window.addEventListener('blur', () => { this.isEditing = false; });
-        const timer = setInterval(() => this.poll(), pollingIntervalMs);
-        window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
+        document.addEventListener('keyup', () => this.finishEditing());
+        window.addEventListener('blur', () => this.finishEditing());
+        const unsubscribe = this.client.subscribe(response => this.receive(response));
+        window.addEventListener('pagehide', unsubscribe, { once: true });
         this.refresh();
     }
 
     async runTask(task) {
         if (this.isBusy) return false;
         this.isBusy = true;
-        this.revision++;
         this.view.showStatus('조회·제어 중…');
         this.view.setBusy(true);
 
@@ -48,13 +45,14 @@ export class PopupController {
         } finally {
             this.isBusy = false;
             this.view.setBusy(false);
+            this.flushPending();
         }
     }
 
     async loadList() {
         const response = await this.client.listMedia();
         this.view.showStatus('');
-        this.view.render(response);
+        this.receive(response, true);
     }
 
     refresh() {
@@ -64,7 +62,6 @@ export class PopupController {
     control(media, action, options) {
         return this.runTask(async () => {
             await this.client.controlMedia(media, action, options);
-            await this.loadList();
             this.view.showStatus(`${media.title}\n${this.successMessage(action, options)}`);
         });
     }
@@ -80,29 +77,32 @@ export class PopupController {
         }
     }
 
-    canPoll() {
-        return !this.isBusy && !this.isEditing;
+    receive(response, force = false) {
+        if (response.sessionId !== this.sessionId) {
+            this.sessionId = response.sessionId;
+            this.lastRevision = -1;
+        }
+        if (response.revision < this.lastRevision) return;
+        this.lastRevision = response.revision;
+        if (!force && (this.isBusy || this.isEditing)) {
+            this.pendingResponse = response;
+            return;
+        }
+        this.pendingResponse = null;
+        this.view.render(response);
     }
 
-    async poll() {
-        if (!this.canPoll() || this.isPolling) return;
-        this.isPolling = true;
-        const startedAtRevision = this.revision;
+    finishEditing() {
+        this.isEditing = false;
+        this.flushPending();
+    }
 
-        try {
-            const response = await this.client.listMedia();
-            // 조회를 기다리는 중 사용자가 명령을 보냈다면 오래된 조회 결과를 버립니다.
-            if (this.canPoll() && this.revision === startedAtRevision) {
-                this.view.render(response);
-            }
-        } catch (error) {
-            if (this.canPoll() && this.revision === startedAtRevision) {
-                this.view.showStatus(`상태 갱신 실패: ${error}`);
-            }
-        } finally {
-            this.isPolling = false;
+    flushPending() {
+        if (!this.isBusy && !this.isEditing && this.pendingResponse) {
+            this.receive(this.pendingResponse);
         }
     }
+
 }
 
 if (typeof document !== 'undefined' && typeof browser !== 'undefined') {

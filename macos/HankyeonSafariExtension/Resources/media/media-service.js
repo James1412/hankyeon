@@ -56,8 +56,17 @@ export function createMediaService(browserApi) {
 
     async function scanTab(tab) {
         try {
+            // 기존에 열려 있던 문서에도 설치합니다. 새 문서는 manifest가 설치합니다.
+            // 파일 전체를 콘텐츠 스크립트로 주입하여 확장의 runtime 통신을 사용합니다.
+            let observerError = null;
+            try {
+                await browserApi.scripting.executeScript({
+                    target: { tabId: tab.id, allFrames: true }, files: ['media/media-observer.js'],
+                });
+            } catch (error) { observerError = `이벤트 감지기 설치 실패: ${error}`; }
             const frames = await executeInTab(tab.id, 'snapshot');
             const result = combineFrames(frames);
+            if (observerError) result.errors.push(observerError);
             // iframe 플레이어의 사이트 대신 사용자가 열어둔 탭의 아이콘을 사용합니다.
             const siteIcon = tab.favIconUrl
                 || frames.find(frame => frame.frameId === 0)?.result?.siteIconUrl
@@ -66,7 +75,7 @@ export function createMediaService(browserApi) {
                 mediaList: result.mediaList.map(media => ({
                     ...media,
                     thumbnailUrl: media.thumbnailUrl ?? siteIcon,
-                    title: tab.title || media.title || '제목 없는 미디어',
+                    title: displayTitle(media, tab),
                     tabUrl: tab.url,
                     tabId: tab.id,
                 })),
@@ -75,6 +84,14 @@ export function createMediaService(browserApi) {
         } catch (error) {
             return { mediaList: [], errors: [`${tab.title ?? '탭'}: ${error}`] };
         }
+    }
+
+    function displayTitle(media, tab) {
+        const host = new URL(media.mediaUrl).hostname;
+        const isYouTube = host === 'youtube.com' || host.endsWith('.youtube.com');
+        // YouTube 본영상에서 읽은 제목을 탭 제목으로 덮어쓰지 않습니다.
+        return (isYouTube ? media.title || tab.title : tab.title || media.title)
+            || '제목 없는 미디어';
     }
 
     async function queryTabs() {
@@ -156,5 +173,5 @@ export function createMediaService(browserApi) {
         return result;
     }
 
-    return { listMedia, controlMedia };
+    return { listMedia, controlMedia, scanTab, queryTabs, sendSnapshotToNative };
 }

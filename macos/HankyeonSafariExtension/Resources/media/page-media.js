@@ -7,6 +7,29 @@ export async function mediaOperation(action, mediaId, expectedMediaUrl, volume =
     const commandTimeoutMs = 6000;
     const minimumVideoDurationSeconds = 10;
 
+    function isYouTube(media) {
+        try {
+            const host = new URL(documentUrl(media)).hostname;
+            return host === 'youtube.com' || host.endsWith('.youtube.com');
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function isYouTubePreview(media) {
+        // 실제 진단에서 본영상과 동일한 video 클래스를 가진 별도 미리보기 플레이어를 확인했습니다.
+        return isYouTube(media) && Boolean(media.closest?.('#inline-preview-player, ytd-video-preview'));
+    }
+
+    function mediaTitle(media) {
+        const mediaDocument = media.ownerDocument ?? document;
+        if (isYouTube(media) && media.closest?.('#movie_player')) {
+            const heading = mediaDocument.querySelector?.('h1.ytd-watch-metadata, h1.title');
+            if (heading?.textContent?.trim()) return heading.textContent.trim();
+        }
+        return mediaDocument.title || document.title;
+    }
+
     function isContentPlayer(media) {
         // 사용자 조작용 플레이어와 장식용 video를 구분합니다.
         return Boolean(media.controls || media.closest?.(
@@ -27,6 +50,7 @@ export async function mediaOperation(action, mediaId, expectedMediaUrl, volume =
     function shouldListMedia(media) {
         // 아직 미디어 정보가 없는 빈/초기화 중 플레이어는 다음 조회에서 다시 확인합니다.
         if (media.readyState === 0) return false;
+        if (isYouTubePreview(media)) return false;
         if (isBackgroundVideo(media)) return false;
 
         const isVideo = media.tagName?.toLowerCase() === 'video';
@@ -138,7 +162,7 @@ export async function mediaOperation(action, mediaId, expectedMediaUrl, volume =
 
         return {
             mediaId: media.dataset.hankyeonMediaId,
-            title: media.ownerDocument?.title || document.title,
+            title: mediaTitle(media),
             mediaUrl: documentUrl(media),
             thumbnailUrl: thumbnailUrl(media),
             kind: media.tagName?.toLowerCase() ?? 'video',
@@ -281,7 +305,7 @@ export async function mediaOperation(action, mediaId, expectedMediaUrl, volume =
                 throw new Error('미디어 문서가 바뀌었습니다. 목록을 새로고침해주세요.');
             }
             if (!shouldListMedia(media)) {
-                throw new Error('광고·짧은 영상 또는 준비되지 않은 미디어입니다. 목록을 새로고침해주세요.');
+                throw new Error('미리보기·광고·짧은 영상 또는 준비되지 않은 미디어입니다. 목록을 새로고침해주세요.');
             }
             await executeCommand(media);
         }

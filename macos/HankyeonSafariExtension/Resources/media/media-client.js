@@ -31,5 +31,16 @@ export function createMediaClient(runtime) {
         return response;
     }
 
-    return { listMedia, controlMedia };
+    function subscribe(onSnapshot) {
+        const listener = (message, sender) => {
+            if (sender?.tab || (sender?.id && sender.id !== runtime.id)) return;
+            if (message?.type === 'hankyeon-list-updated' && message.response?.ok) {
+                onSnapshot(message.response);
+            }
+        };
+        runtime.onMessage.addListener(listener);
+        return () => runtime.onMessage.removeListener(listener);
+    }
+
+    return { listMedia, controlMedia, subscribe };
 }

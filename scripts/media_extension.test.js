@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
+import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
 
 import { mediaOperation } from '../macos/HankyeonSafariExtension/Resources/media/page-media.js';
@@ -354,16 +355,19 @@ test('background rejects messages from webpages and allows its own popup', async
     }
 });
 
-test('polling resumes after dragging even if the slider remains focused', async () => {
+test('popup defers updates while editing and discards stale snapshots', async () => {
     const { PopupController } = await import('../macos/HankyeonSafariExtension/Resources/popup.js');
+    const rendered = [];
     const controller = Object.create(PopupController.prototype);
-    Object.assign(controller, { isBusy: false, isEditing: false });
-    assert.equal(controller.canPoll(), true);
-    controller.isEditing = true;
-    assert.equal(controller.canPoll(), false);
-    controller.isEditing = false;
-    controller.isBusy = true;
-    assert.equal(controller.canPoll(), false);
+    Object.assign(controller, { isBusy: false, isEditing: true, lastRevision: -1,
+        pendingResponse: null, view: { render: response => rendered.push(response.revision) } });
+    controller.receive({ revision: 2 });
+    controller.receive({ revision: 1 });
+    assert.deepEqual(rendered, []);
+    controller.finishEditing();
+    assert.deepEqual(rendered, [2]);
+    controller.receive({ revision: 1 });
+    assert.deepEqual(rendered, [2]);
 });
 
 test('YouTube thumbnail tracks the current video even with stale metadata', async () => {
@@ -423,4 +427,136 @@ test('long marketing/background videos are hidden, not just short clips', async 
     assert.equal(result.mediaList.length, 2);
     assert.equal(result.mediaList[0].mediaId, lesson.dataset.hankyeonMediaId);
     assert.equal(result.mediaList[1].mediaId, customPlayer.dataset.hankyeonMediaId);
+});
+
+test('YouTube main and preview videos with identical classes are not both listed', async () => {
+    const main = fakeMedia(); main.duration = 10227.101;
+    const preview = fakeMedia(); preview.duration = 1660.561; preview.paused = true; preview.muted = true;
+    const mediaDocument = {
+        URL: 'https://www.youtube.com/watch?v=cbuZfY2S2UQ', title: 'Tab title',
+        querySelector: selector => selector.includes('h1.') ? { textContent: 'Coding playlist' } : null,
+    };
+    for (const media of [main, preview]) {
+        media.ownerDocument = mediaDocument;
+        media.className = 'video-stream html5-main-video';
+        media.closest = selector => {
+            if (selector.includes('#inline-preview-player')) return media === preview ? {} : null;
+            if (selector === '#movie_player') return media === main ? {} : null;
+            if (selector.includes('.html5-video-player')) return {};
+            return null;
+        };
+    }
+    const operate = pageOperation([main, preview]);
+    const result = await operate('snapshot');
+    assert.equal(result.mediaList.length, 1);
+    assert.equal(result.mediaList[0].mediaId, main.dataset.hankyeonMediaId);
+    assert.equal(result.mediaList[0].title, 'Coding playlist');
+    assert.equal((await operate('play', preview.dataset.hankyeonMediaId, mediaDocument.URL)).ok, false);
+    main.paused = true;
+    assert.equal((await operate('snapshot')).mediaList.length, 1, 'Paused main content remains controllable');
+});
+
+test('service preserves the main YouTube title instead of assigning the tab title', async () => {
+    const { api } = browserFixture();
+    api.scripting.executeScript = async () => [{ frameId: 0, result: { ok: true, mediaList: [{
+        mediaId: 'main', mediaUrl: 'https://www.youtube.com/watch?v=cbuZfY2S2UQ', title: 'Coding playlist',
+    }] } }];
+    const response = await createMediaService(api).listMedia();
+    assert.equal(response.mediaList[0].title, 'Coding playlist');
+});
+
+test('tracker rescans only the changed tab and removes closed tabs', async () => {
+    const { createMediaTracker } = await import('../macos/HankyeonSafariExtension/Resources/media/media-tracker.js');
+    const scanned = [], published = [];
+    let queries = 0;
+    const tabs = [{ id: 1, index: 0, windowId: 1, url: 'https://one.test' },
+        { id: 2, index: 1, windowId: 1, url: 'https://two.test' }];
+    const tracker = createMediaTracker({ tabs: { get: async id => tabs.find(tab => tab.id === id) },
+        runtime: { sendMessage: async message => published.push(message.response) } }, {
+        queryTabs: async () => { queries++; return tabs; },
+        scanTab: async tab => { scanned.push(tab.id); return { mediaList: [{ tabId: tab.id }], errors: [] }; },
+        sendSnapshotToNative: async () => ({ ok: true }),
+    });
+    await tracker.listMedia();
+    scanned.length = 0;
+    await tracker.refreshTab(2);
+    assert.deepEqual(scanned, [2]);
+    assert.equal(queries, 1);
+    assert.deepEqual(published.at(-1).mediaList.map(media => media.tabId), [1, 2]);
+    await tracker.removeTab(1);
+    assert.deepEqual(published.at(-1).mediaList.map(media => media.tabId), [2]);
+});
+
+test('client subscribes only to background updates and releases its listener', () => {
+    let listener, removed;
+    const runtime = { id: 'ours', onMessage: {
+        addListener: fn => { listener = fn; }, removeListener: fn => { removed = fn; },
+    } };
+    const responses = [];
+    const unsubscribe = createMediaClient(runtime).subscribe(value => responses.push(value));
+    const message = { type: 'hankyeon-list-updated', response: { ok: true } };
+    listener(message, { id: 'ours', tab: { id: 1 } });
+    listener(message, { id: 'other' });
+    listener(message, { id: 'ours' });
+    assert.equal(responses.length, 1);
+    unsubscribe();
+    assert.equal(removed, listener);
+});
+
+test('observer installs once, batches events, and prioritizes pause over progress', async () => {
+    const observerSource = readFileSync(new URL('../macos/HankyeonSafariExtension/Resources/media/media-observer.js', import.meta.url), 'utf8');
+    const listeners = new Map(), timers = new Map(), sent = [];
+    let timerId = 0, now = 2000, installations = 0;
+    const context = vm.createContext({
+        browser: { runtime: { sendMessage: async message => sent.push(message) } },
+        location: { href: 'https://example.com/watch' },
+        Date: { now: () => now },
+        document: { addEventListener: (name, fn) => listeners.set(name, fn),
+            removeEventListener: name => listeners.delete(name), querySelectorAll: () => [] },
+        window: { addEventListener() {} },
+        MutationObserver: class { observe() { installations++; } disconnect() {} },
+        setTimeout: (fn, delay) => { timers.set(++timerId, { fn, delay }); return timerId; },
+        clearTimeout: id => timers.delete(id),
+    });
+    const install = () => vm.runInContext(observerSource, context);
+    install();
+    install();
+    assert.equal(installations, 1);
+    const emit = name => listeners.get(name)({ type: name, target: { matches: () => true } });
+    const flush = () => { const pending = [...timers.values()]; timers.clear(); pending.forEach(timer => timer.fn()); };
+    emit('timeupdate'); flush();
+    assert.equal(sent.length, 1);
+    now += 100;
+    emit('timeupdate'); emit('timeupdate');
+    assert.equal(timers.size, 1);
+    assert.equal([...timers.values()][0].delay, 900);
+    emit('pause');
+    assert.equal([...timers.values()][0].delay, 50);
+    flush();
+    assert.equal(sent.length, 2);
+    context.hankyeonMediaObserver.stop();
+    assert.equal(listeners.size, 0);
+});
+
+test('tracker does not resurrect a tab when its delayed scan finishes after close', async () => {
+    const { createMediaTracker } = await import('../macos/HankyeonSafariExtension/Resources/media/media-tracker.js');
+    let resolveScan, delay = false;
+    const published = [];
+    const tab = { id: 1, windowId: 1, index: 0, url: 'https://one.test' };
+    const tracker = createMediaTracker({ tabs: { get: async () => tab },
+        runtime: { sendMessage: async message => published.push(message.response) } }, {
+        queryTabs: async () => [tab],
+        scanTab: async () => {
+            if (delay) await new Promise(resolve => { resolveScan = resolve; });
+            return { mediaList: [{ tabId: 1 }], errors: [] };
+        },
+        sendSnapshotToNative: async () => ({ ok: true }),
+    });
+    await tracker.listMedia();
+    delay = true;
+    const pending = tracker.refreshTab(1);
+    await Promise.resolve(); await Promise.resolve();
+    await tracker.removeTab(1);
+    resolveScan(); await pending;
+    assert.deepEqual(published.at(-1).mediaList, []);
 });
