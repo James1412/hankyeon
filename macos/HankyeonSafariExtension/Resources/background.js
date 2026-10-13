@@ -1,7 +1,9 @@
+import { connectNativeCommands } from './media/native-commands.js';
 import { createMediaService } from './media/media-service.js';
 import { createMediaTracker } from './media/media-tracker.js';
 
-const mediaService = createMediaService(browser);
+let reconnectNative = () => {};
+const mediaService = createMediaService(browser, () => reconnectNative());
 const tracker = createMediaTracker(browser, mediaService);
 const allowedMessageTypes = new Set(['hankyeon-list', 'hankyeon-control']);
 
@@ -42,3 +44,14 @@ browser.tabs.onUpdated?.addListener((tabId, change) => {
 browser.tabs.onRemoved?.addListener(tabId => tracker.removeTab(tabId).catch(console.error));
 browser.tabs.onMoved?.addListener(() => tracker.updateOrder().catch(console.error));
 browser.tabs.onAttached?.addListener(() => tracker.updateOrder().catch(console.error));
+
+// 앱 버튼도 팝업과 같은 조회·제어 경로를 사용합니다.
+const nativeCommands = connectNativeCommands(browser, async command => {
+    if (command.action === 'refresh') return tracker.listMedia();
+    const result = await mediaService.controlMedia(command);
+    // 제어 결과는 바로 응답합니다. 목록 전송의 지연이 명령 성공을 숨기지 않도록 합니다.
+    tracker.refreshTab(command.tabId).catch(console.error);
+    return result;
+});
+
+reconnectNative = nativeCommands.reconnect;

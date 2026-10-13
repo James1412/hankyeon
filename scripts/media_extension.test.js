@@ -560,3 +560,82 @@ test('tracker does not resurrect a tab when its delayed scan finishes after clos
     resolveScan(); await pending;
     assert.deepEqual(published.at(-1).mediaList, []);
 });
+
+test('native commands acknowledge execution and never accept unrelated messages', async () => {
+    const { connectNativeCommands } = await import('../macos/HankyeonSafariExtension/Resources/media/native-commands.js');
+    let listener;
+    const replies = [], actions = [];
+    const port = { onMessage: { addListener: fn => { listener = fn; } },
+        onDisconnect: { addListener() {} }, disconnect() {} };
+    const api = { runtime: { connectNative: () => port,
+        sendNativeMessage: async (_, reply) => replies.push(reply) } };
+    const stop = connectNativeCommands(api, async command => { actions.push(command.action); return { ok: true }; });
+    await listener({ name: 'other', userInfo: { requestId: '11111111-1111-1111-1111-111111111111', action: 'pause' } });
+    const request = { name: 'hankyeon-command', userInfo: {
+        requestId: '11111111-1111-1111-1111-111111111111', action: 'pause',
+    } };
+    await listener(request);
+    await listener(request);
+    assert.deepEqual(actions, ['pause']);
+    assert.equal(replies[0].type, 'hankyeon-command-result');
+    assert.equal(replies[0].ok, true);
+    stop();
+});
+
+test('native snapshots are persisted in order even when callers overlap', async () => {
+    let releaseFirst;
+    const deliveries = [];
+    const { api } = browserFixture();
+    api.runtime.sendNativeMessage = async (_, message) => {
+        deliveries.push(message.mediaList[0].mediaId);
+        if (deliveries.length === 1) await new Promise(resolve => { releaseFirst = resolve; });
+        return { ok: true };
+    };
+    const service = createMediaService(api);
+    const first = service.sendSnapshotToNative([{ mediaId: 'old' }]);
+    const second = service.sendSnapshotToNative([{ mediaId: 'new' }]);
+    await Promise.resolve(); await Promise.resolve();
+    assert.deepEqual(deliveries, ['old']);
+    releaseFirst(); await Promise.all([first, second]);
+    assert.deepEqual(deliveries, ['old', 'new']);
+});
+
+test('popup notifications never block native command completion', async () => {
+    const { createMediaTracker } = await import('../macos/HankyeonSafariExtension/Resources/media/media-tracker.js');
+    const tab = { id: 1, windowId: 1, index: 0, url: 'https://example.com' };
+    const tracker = createMediaTracker({
+        tabs: { get: async () => tab },
+        runtime: { sendMessage: () => new Promise(() => {}) },
+    }, {
+        queryTabs: async () => [tab],
+        scanTab: async () => ({ mediaList: [], errors: [] }),
+        sendSnapshotToNative: async () => ({ ok: true }),
+    });
+    await tracker.listMedia();
+    await tracker.refreshTab(1);
+});
+
+test('native port reconnect ignores stale disconnects and preserves command deduplication', async () => {
+    const { connectNativeCommands } = await import('../macos/HankyeonSafariExtension/Resources/media/native-commands.js');
+    const ports = [], actions = [];
+    const api = { runtime: {
+        connectNative: () => {
+            const port = { onMessage: { addListener: fn => { port.message = fn; } },
+                onDisconnect: { addListener: fn => { port.disconnected = fn; } },
+                disconnect: () => port.disconnected() };
+            ports.push(port); return port;
+        }, sendNativeMessage: async () => ({ ok: true }),
+    } };
+    const stop = connectNativeCommands(api, async command => { actions.push(command.action); return { ok: true }; });
+    const request = { requestId: '22222222-2222-2222-2222-222222222222', action: 'pause' };
+    stop.reconnect();
+    await ports[0].message(request);
+    assert.deepEqual(actions, []);
+    await ports[1].message(request);
+    await ports.at(-1).message(request);
+    assert.deepEqual(actions, ['pause']);
+    stop();
+    const count = ports.length;
+    stop.reconnect();
+    assert.equal(ports.length, count);
+});

@@ -29,6 +29,12 @@
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		76CD4F4E359941ADA259F98C /* MediaBridgeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD49921E2D64476C86F1BEF1 /* MediaBridgeStore.swift */; };
+		0FE16524B7B74B7E92665100 /* MediaBridgeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD49921E2D64476C86F1BEF1 /* MediaBridgeStore.swift */; };
+		EA325956264B404085067257 /* SharedDirectoryObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D057A1B46734648BE451C47 /* SharedDirectoryObserver.swift */; };
+		9EB8773B7FFB44F0AC6A3F29 /* SafariMediaBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44145568D34247FFA0045A3F /* SafariMediaBridge.swift */; };
+		ABC01234000000000000000B /* NativeAudioBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC012340000000000000001; };
+		ABC01234000000000000000C /* ProcessAudio.mm in Sources */ = {isa = PBXBuildFile; fileRef = ABC012340000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +106,11 @@
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		AD49921E2D64476C86F1BEF1 /* MediaBridgeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/MediaBridgeStore.swift; sourceTree = SOURCE_ROOT; };
+		8D057A1B46734648BE451C47 /* SharedDirectoryObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runner/Media/SharedDirectoryObserver.swift; sourceTree = SOURCE_ROOT; };
+		44145568D34247FFA0045A3F /* SafariMediaBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runner/Media/SafariMediaBridge.swift; sourceTree = SOURCE_ROOT; };
+		ABC012340000000000000001 /* NativeAudioBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runner/Audio/NativeAudioBridge.swift; sourceTree = SOURCE_ROOT; };
+		ABC012340000000000000002 /* ProcessAudio.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Runner/Audio/ProcessAudio.mm; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -210,6 +221,11 @@
 			isa = PBXGroup;
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
+				44145568D34247FFA0045A3F /* SafariMediaBridge.swift */,
+				ABC012340000000000000002 /* ProcessAudio.mm */,
+				ABC012340000000000000001 /* NativeAudioBridge.swift */,
+				8D057A1B46734648BE451C47 /* SharedDirectoryObserver.swift */,
+				AD49921E2D64476C86F1BEF1 /* MediaBridgeStore.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
@@ -424,6 +440,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0FE16524B7B74B7E92665100 /* MediaBridgeStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -439,6 +456,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				76CD4F4E359941ADA259F98C /* MediaBridgeStore.swift in Sources */,
+				EA325956264B404085067257 /* SharedDirectoryObserver.swift in Sources */,
+				9EB8773B7FFB44F0AC6A3F29 /* SafariMediaBridge.swift in Sources */,
+				ABC01234000000000000000C /* ProcessAudio.mm in Sources */,
+				ABC01234000000000000000B /* NativeAudioBridge.swift in Sources */,
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
@@ -490,8 +512,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = HankyeonSafariExtension/HankyeonSafariExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G98G5D2QDK;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -518,6 +543,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.HankyeonSafariExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -525,6 +551,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Debug;
 		};
@@ -540,8 +567,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = HankyeonSafariExtension/HankyeonSafariExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G98G5D2QDK;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -567,12 +597,14 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.HankyeonSafariExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Release;
 		};
@@ -588,8 +620,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = HankyeonSafariExtension/HankyeonSafariExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G98G5D2QDK;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -615,12 +650,14 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.HankyeonSafariExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Profile;
 		};
@@ -634,6 +671,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hankyeon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hankyeon";
 			};
 			name = Debug;
@@ -648,6 +686,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hankyeon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hankyeon";
 			};
 			name = Release;
@@ -662,6 +701,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.jiganglee1412.hankyeon.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hankyeon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hankyeon";
 			};
 			name = Profile;
@@ -674,7 +714,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -722,6 +762,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = G98G5D2QDK;
@@ -731,7 +772,9 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Profile;
 		};
@@ -751,7 +794,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -807,7 +850,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -855,6 +898,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = G98G5D2QDK;
@@ -864,8 +908,10 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Debug;
 		};
@@ -876,6 +922,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Release.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = G98G5D2QDK;
@@ -885,7 +932,9 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
 				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/Audio/AudioBridge.h;
 			};
 			name = Release;
 		};

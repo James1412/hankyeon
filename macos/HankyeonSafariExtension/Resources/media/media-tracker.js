@@ -8,6 +8,8 @@ export function createMediaTracker(browserApi, service) {
     let initialized = false;
     let initialization = null;
     let publication = Promise.resolve();
+    let publishing = false;
+    let dirty = false;
 
     async function readTab(tab) {
         const version = (versions.get(tab.id) ?? 0) + 1;
@@ -27,18 +29,28 @@ export function createMediaTracker(browserApi, service) {
         const mediaList = entries.flatMap(entry => entry.result.mediaList);
         const errors = entries.flatMap(entry => entry.result.errors);
         const snapshotRevision = revision;
-        const nativeReceipt = await service.sendSnapshotToNative(mediaList);
+        const nativeReceipt = await service.sendSnapshotToNative(mediaList, errors);
         return { ok: true, mediaList, errors, nativeReceipt, revision: snapshotRevision, sessionId };
     }
 
     function publish() {
+        dirty = true;
         if (loading) return Promise.resolve();
-        publication = publication.catch(() => {}).then(async () => {
-            const response = await snapshot();
-            try {
-                await browserApi.runtime.sendMessage({ type: 'hankyeon-list-updated', response });
-            } catch (_) { /* 팝업이 닫혔으면 수신자가 없어도 정상입니다. */ }
-        });
+        if (publishing) return publication;
+        publishing = true;
+        publication = (async () => {
+            // 전달이 느릴 때 중간 상태를 무한히 쌓지 않고 최신 캐시로 합칩니다.
+            while (dirty && !loading) {
+                dirty = false;
+                const response = await snapshot();
+                try {
+                    // 닫힌 팝업의 응답을 기다리면 Safari에서 명령 완료까지 멈출 수 있습니다.
+                    // 목록 알림은 단방향이며 native 저장 완료와 분리합니다.
+                    Promise.resolve(browserApi.runtime.sendMessage({ type: 'hankyeon-list-updated', response }))
+                        .catch(() => {});
+                } catch (_) { /* 팝업이 닫혔으면 수신자가 없어도 정상입니다. */ }
+            }
+        })().finally(() => { publishing = false; });
         return publication;
     }
 

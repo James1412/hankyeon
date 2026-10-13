@@ -6,7 +6,8 @@ const maxConcurrentScans = 4;
 const nativeAppId = 'com.jiganglee1412.hankyeon';
 
 /** 브라우저 접근을 담당합니다. API를 인자로 받아 실제 브라우저 없이 테스트할 수 있습니다. */
-export function createMediaService(browserApi) {
+export function createMediaService(browserApi, onNativeDelivery = () => {}) {
+    let nativeDelivery = Promise.resolve();
     async function executeInTab(tabId, action, options = {}) {
         const { mediaId = null, mediaUrl = null, volume = null, position = null, frameId = null } = options;
         const target = action === 'snapshot'
@@ -119,18 +120,21 @@ export function createMediaService(browserApi) {
         return results;
     }
 
-    async function sendSnapshotToNative(mediaList) {
-        try {
-            const receipt = await browserApi.runtime.sendNativeMessage(nativeAppId, {
-                type: 'hankyeon-snapshot',
-                mediaList,
-            });
-            if (!receipt?.ok) throw new Error(receipt?.error ?? '네이티브 응답 없음');
-            return receipt;
-        } catch (error) {
-            // Swift 통신이 실패해도 Safari 목록과 제어는 계속 사용할 수 있습니다.
-            return { ok: false, error: String(error) };
-        }
+    function sendSnapshotToNative(mediaList, errors = []) {
+        // 공유 파일이 이전 상태로 덮어써지지 않도록 저장 요청을 순서대로 보냅니다.
+        nativeDelivery = nativeDelivery.catch(() => {}).then(async () => {
+            try {
+                const receipt = await browserApi.runtime.sendNativeMessage(nativeAppId, {
+                    type: 'hankyeon-snapshot', mediaList, errors,
+                });
+                if (!receipt?.ok) throw new Error(receipt?.error ?? '네이티브 응답 없음');
+                onNativeDelivery();
+                return receipt;
+            } catch (error) {
+                return { ok: false, error: String(error) };
+            }
+        });
+        return nativeDelivery;
     }
 
     async function listMedia() {
@@ -138,7 +142,7 @@ export function createMediaService(browserApi) {
         const results = await scanTabs(tabs);
         const mediaList = results.flatMap(result => result.mediaList);
         const errors = results.flatMap(result => result.errors);
-        const nativeReceipt = await sendSnapshotToNative(mediaList);
+        const nativeReceipt = await sendSnapshotToNative(mediaList, errors);
         return { ok: true, mediaList, errors, nativeReceipt };
     }
 

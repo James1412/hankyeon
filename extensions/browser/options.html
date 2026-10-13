@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>Hankyeon 연결</title>
+<style>body{font:16px system-ui;max-width:520px;margin:70px auto;background:#111;color:#eee}input,select,button{display:block;width:100%;padding:12px;margin:12px 0;box-sizing:border-box;background:#222;color:white;border:1px solid #444;border-radius:10px}p{color:#aaa;line-height:1.6}</style>
+<h1>Hankyeon에 연결</h1><p>앱의 브라우저 연결 화면에서 주소와 연결 코드를 복사하세요. 미디어 정보는 이 Mac 안에서만 전달됩니다.</p>
+<label>브라우저<select id="browser"><option>Chrome</option><option>Edge</option><option>Brave</option><option>Firefox</option></select></label>
+<label>연결 주소<input id="endpoint" value="ws://127.0.0.1:43127"></label>
+<label>연결 코드<input id="token" type="password" autocomplete="off"></label>
+<button id="save">연결 저장</button><p id="status"></p><script src="options.js"></script>

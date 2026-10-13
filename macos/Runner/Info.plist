@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Flutter 3.47 Impeller SetupRenderPass crashes in current macOS engine. -->
+	<key>FLTEnableImpeller</key>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -26,6 +29,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>앱별 볼륨을 조절하기 위해 오디오를 처리합니다. 녹음 파일을 저장하거나 전송하지 않습니다.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
